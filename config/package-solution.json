@@ -1,0 +1,40 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/spfx-build/package-solution.schema.json",
+  "solution": {
+    "name": "product-brief-client-side-solution",
+    "id": "6a7ff8e0-213a-4a7d-9a59-a1bd70314bf3",
+    "version": "1.0.0.0",
+    "includeClientSideAssets": true,
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false,
+    "developer": {
+      "name": "",
+      "websiteUrl": "",
+      "privacyUrl": "",
+      "termsOfUseUrl": "",
+      "mpnId": "Undefined-1.18.2"
+    },
+    "metadata": {
+      "shortDescription": {
+        "default": "Product Brief submission platform"
+      },
+      "longDescription": {
+        "default": "Product Brief submission platform"
+      },
+      "screenshotPaths": [],
+      "videoUrl": "",
+      "categories": []
+    },
+    "features": [
+      {
+        "title": "Product Brief Feature",
+        "description": "The feature that activates elements of the Product Brief solution.",
+        "id": "f7447b3b-32ab-4058-99ff-b725fa36ca7c",
+        "version": "1.0.0.0"
+      }
+    ]
+  },
+  "paths": {
+    "zippedPackage": "solution/onyx.sppkg"
+  }
+}

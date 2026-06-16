@@ -1,0 +1,25 @@
+{
+  "@microsoft/generator-sharepoint": {
+    "whichFolder": "subdir",
+    "solutionName": "onyx",
+    "environment": "spo",
+    "packageManager": "npm",
+    "componentType": "webpart",
+    "template": "react",
+    "componentName": "Onyx",
+    "componentDescription": "Product Brief submission platform for Konstructum Group",
+    "plusBeta": false,
+    "isCreatingSolution": true,
+    "nodeVersion": "18.20.4",
+    "sdksVersions": {
+      "@microsoft/microsoft-graph-client": "3.0.2",
+      "@microsoft/teams-js": "2.12.0"
+    },
+    "version": "1.18.2",
+    "libraryName": "onyx",
+    "libraryId": "6a7ff8e0-213a-4a7d-9a59-a1bd70314bf3",
+    "solutionShortDescription": "onyx description",
+    "skipFeatureDeployment": true,
+    "isDomainIsolated": false
+  }
+}

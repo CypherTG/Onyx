@@ -1,0 +1,1040 @@
+@import '~@fluentui/react/dist/sass/References.scss';
+
+/* ─── Full-screen takeover (matches Process Digitization pattern) ─── */
+
+:global(body.onyxFullScreenHost) {
+  overflow: hidden;
+}
+
+:global(.CanvasZone),
+:global(.CanvasSection),
+:global(.ControlZone),
+:global(.CanvasComponent) {
+  max-width: none !important;
+  width: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+:global(.Workbench),
+:global(.WorkbenchPage),
+:global(.WorkbenchCanvas) {
+  padding: 0 !important;
+  margin: 0 !important;
+  max-width: none !important;
+}
+
+:global(body.onyxFullScreenHost [data-automation-id="pageHeader"]),
+:global(body.onyxFullScreenHost [data-automation-id="PageHeader"]),
+:global(body.onyxFullScreenHost [data-automation-id="pageTitle"]),
+:global(body.onyxFullScreenHost .CanvasPageHeader) {
+  display: none !important;
+}
+
+/* ─── Root container: base styles (shared by start screen + open app) ─── */
+
+.onyx {
+  background:
+    linear-gradient(180deg, #fff8f6 0%, #fffdfc 160px, #ffffff 420px),
+    #ffffff;
+  box-sizing: border-box;
+  color: #251f1f;
+  font-family: "Outfit", "Inter", "Segoe UI", Arial, sans-serif;
+  margin: 0;
+  overflow-x: hidden;
+  padding: 32px clamp(20px, 3vw, 48px) clamp(20px, 3vw, 48px);
+  position: relative;
+  width: 100%;
+
+  * {
+    box-sizing: border-box;
+    min-width: 0;
+  }
+
+  input,
+  select,
+  textarea {
+    background: #fffdfd;
+    border: 1px solid #e6d8d5;
+    border-radius: 6px;
+    color: #251f1f;
+    font-family: inherit;
+    font-size: 14px;
+    min-height: 38px;
+    outline: none;
+    padding: 9px 10px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    width: 100%;
+  }
+
+  textarea {
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    background: #ffffff;
+    border-color: #0f7b5f;
+    box-shadow: 0 0 0 2px rgba(15, 123, 95, 0.14);
+  }
+
+  button {
+    border: 1px solid #d8d1cf;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 650;
+    min-height: 38px;
+    padding: 9px 14px;
+    transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+  }
+
+  button:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+}
+
+/* ─── Full-screen overlay: applied only when app is opened ─── */
+
+.onyxOpen {
+  height: 100vh;
+  height: 100dvh;
+  left: 0;
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  width: 100vw;
+  z-index: 9999;
+}
+
+/* ─── Preview bar ─── */
+
+.previewBar {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #eee1de;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  min-height: 52px;
+  padding: 10px 16px;
+
+  span {
+    color: #7b4e4e;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+
+  button {
+    background: #ffffff;
+    border-color: #d8d1cf;
+    color: #3a2f2f;
+  }
+}
+
+/* ─── Header ─── */
+
+.header {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 244, 241, 0.98), rgba(255, 253, 252, 0.98) 58%, rgba(236, 248, 243, 0.92)),
+    #fff8f6;
+  border: 1px solid #eadbd8;
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(105, 38, 38, 0.08);
+  display: grid;
+  gap: clamp(16px, 2.5vw, 32px);
+  grid-template-columns: minmax(0, 1fr) minmax(200px, 280px);
+  margin-bottom: 24px;
+  padding: clamp(18px, 2vw, 32px);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #e81123, #a80000, #800080, #0078d4);
+  }
+
+  h1 {
+    color: #231f20;
+    font-size: clamp(36px, 4.4vw, 58px);
+    font-weight: 650;
+    letter-spacing: 0;
+    line-height: 1.1;
+    margin: 0 0 8px;
+  }
+}
+
+.brandPanel {
+  min-width: 0;
+}
+
+.brandRow {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  min-width: 0;
+}
+
+.logo {
+  background: #ffffff;
+  border: 1px solid #eadbd8;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(198, 45, 45, 0.12);
+  flex: 0 0 auto;
+  height: clamp(56px, 6vw, 86px);
+  object-fit: contain;
+  padding: 8px;
+  width: clamp(72px, 8vw, 112px);
+}
+
+/* ─── Start / Landing screen ─── */
+
+.startShell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: auto;
+  padding: 48px 16px;
+}
+
+.startCard {
+  background:
+    linear-gradient(135deg, rgba(255, 244, 241, 0.98), rgba(255, 255, 255, 0.98) 62%, rgba(236, 248, 243, 0.92)),
+    #ffffff;
+  border: 1px solid #eadbd8;
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(105, 38, 38, 0.08);
+  max-width: 520px;
+  padding: 40px;
+  text-align: center;
+  width: min(100%, 520px);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, #e81123, #a80000, #800080, #0078d4);
+  }
+
+  h1 {
+    color: #231f20;
+    font-size: 32px;
+    line-height: 1.15;
+    margin: 0 0 12px;
+    text-align: center;
+  }
+
+  p:not(.eyebrow) {
+    color: #625454;
+    font-size: 15px;
+    line-height: 1.55;
+    margin: 0 auto 24px;
+    text-align: center;
+    max-width: 380px;
+  }
+
+  button {
+    margin: 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.startLogo {
+  background: #ffffff;
+  border: 1px solid #eadbd8;
+  border-radius: 8px;
+  height: 70px;
+  margin: 0 auto 16px;
+  display: block;
+  object-fit: contain;
+  padding: 8px;
+  width: 92px;
+}
+
+.eyebrow {
+  color: #c92f2f;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin: 0 0 8px;
+  text-transform: uppercase;
+}
+
+.subtitle {
+  color: #625454;
+  font-size: clamp(14px, 1.4vw, 18px);
+  margin: 0;
+  max-width: 760px;
+}
+
+/* ─── Progress card ─── */
+
+.progressCard {
+  background: #ffffff;
+  border: 1px solid #d8eadf;
+  border-radius: 10px;
+  box-shadow: 0 12px 28px rgba(16, 92, 72, 0.08);
+  padding: 16px;
+
+  span {
+    color: #0f6d55;
+    display: block;
+    font-size: 26px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  small {
+    color: #6a5b5b;
+    display: block;
+    margin: 0 0 8px;
+  }
+
+  small:last-child {
+    margin: 8px 0 0;
+  }
+}
+
+.progressTrack {
+  background: #f8dede;
+  border-radius: 999px;
+  height: 8px;
+  overflow: hidden;
+}
+
+.progressFill {
+  background: linear-gradient(90deg, #0f7b5f, #55aa75);
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+/* ─── Messages ─── */
+
+.message {
+  border-radius: 8px;
+  font-weight: 600;
+  margin: 0 0 16px;
+  padding: 12px 14px;
+}
+
+/* ─── Records / Dashboard panel ─── */
+
+.recordsPanel {
+  align-items: start;
+  background: #ffffff;
+  border: 1px solid #eadbd8;
+  border-radius: 10px;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 0.5fr) auto minmax(0, 2fr);
+  margin-bottom: 20px;
+  max-width: 100%;
+  padding: 16px;
+
+  h2 {
+    color: #2d2424;
+    font-size: 18px;
+    margin: 0 0 4px;
+  }
+
+  p {
+    color: #756363;
+    font-size: 12px;
+    margin: 0;
+  }
+}
+
+.recordsActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.recordsList {
+  display: grid;
+  gap: 10px;
+}
+
+.recordItem {
+  background: #fffaf9;
+  border: 1px solid #eadbd8;
+  border-radius: 8px;
+  padding: 12px;
+
+  strong,
+  span {
+    display: block;
+  }
+
+  strong {
+    color: #251f1f;
+    font-size: 13px;
+    margin-bottom: 3px;
+  }
+
+  span {
+    color: #7b4e4e;
+    font-size: 12px;
+  }
+}
+
+.statusPill {
+  border-radius: 999px;
+  display: inline-block !important;
+  font-size: 11px !important;
+  font-weight: 700;
+  justify-self: start;
+  margin: 8px 0 3px;
+  padding: 4px 8px;
+  width: max-content;
+}
+
+.statusPending {
+  background: #fff3d8;
+  color: #7a4d00 !important;
+}
+
+.statusComplete {
+  background: #e6f6ef;
+  color: #0b5b47 !important;
+}
+
+.statusOverdue {
+  background: #ffe7e7;
+  color: #a12f2f !important;
+}
+
+/* ─── Admin decision area (event-isolated zone) ─── */
+
+.decisionActions {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e6dddd;
+  border-radius: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 10px;
+  position: relative;
+  z-index: 10;
+
+  button {
+    font-size: 12px;
+    min-height: 32px;
+    padding: 6px 10px;
+  }
+}
+
+.decisionComment {
+  display: block;
+  flex: 1 0 100%;
+
+  span {
+    color: #7b4e4e;
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  textarea {
+    background: #fffdfc;
+    border: 1px solid #e6d8d5;
+    border-radius: 6px;
+    color: #251f1f;
+    font-size: 13px;
+    line-height: 1.45;
+    min-height: 74px;
+    resize: vertical;
+    width: 100%;
+  }
+}
+
+.decisionState {
+  color: #251f1f !important;
+  display: inline-flex !important;
+  font-size: 12px !important;
+  font-weight: 700;
+  margin-right: auto;
+  width: auto;
+}
+
+.decisionButton {
+  border-radius: 6px;
+  min-width: 72px;
+  transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.decisionButton:not(:disabled):hover {
+  box-shadow: 0 6px 14px rgba(53, 37, 37, 0.12);
+  transform: translateY(-1px);
+}
+
+.approveButton {
+  background: #0f6d55;
+  border-color: #0f6d55;
+  color: #ffffff;
+}
+
+.holdButton {
+  background: #fff7e8;
+  border-color: transparent;
+  color: #7a4d00;
+}
+
+.rejectButton {
+  background: #f7f2f1;
+  border-color: transparent;
+  color: #8f2f2f;
+}
+
+.selectedDecision {
+  background: #251f1f;
+  border-color: #251f1f;
+  color: #ffffff;
+}
+
+.emptyState {
+  color: #756363;
+  font-size: 13px;
+  padding: 10px 0;
+}
+
+.secondaryButtonCompact {
+  background: #ffffff;
+  border-color: #d8d1cf;
+  color: #3a2f2f;
+  justify-self: start;
+}
+
+/* ─── Alert styles ─── */
+
+.success {
+  background: #e6f6ef;
+  color: #0b5b47;
+}
+
+.error {
+  background: #fff0f0;
+  color: #9d2f24;
+}
+
+.info {
+  background: #f7eeee;
+  color: #7e3636;
+}
+
+/* ─── Meta / People grids ─── */
+
+.metaGrid,
+.peopleGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+  margin-bottom: 20px;
+  max-width: 100%;
+
+  label {
+    background: #ffffff;
+    border: 1px solid #eadbd8;
+    border-radius: 8px;
+    display: block;
+    padding: 12px;
+  }
+
+  span {
+    color: #7b4e4e;
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 7px;
+  }
+}
+
+.peopleGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.peopleCard {
+  background: #ffffff;
+  border: 1px solid #eadbd8;
+  border-radius: 8px;
+  padding: 12px;
+
+  :global(.ms-BasePicker-text) {
+    background: #fffdfd;
+    border: 1px solid #e6d8d5;
+    border-radius: 6px;
+    min-height: 38px;
+    padding: 1px 8px;
+  }
+
+  :global(.ms-BasePicker-text:focus-within) {
+    background: #ffffff;
+    border-color: #0f7b5f;
+    box-shadow: 0 0 0 2px rgba(15, 123, 95, 0.14);
+  }
+
+  :global(.ms-PickerPersona-container) {
+    background: #e6f6ef;
+    border-radius: 999px;
+    color: #0b5b47;
+  }
+
+  :global(.ms-Persona-primaryText) {
+    color: #0b5b47;
+    font-weight: 600;
+  }
+
+  :global(input) {
+    border: 0;
+    box-shadow: none;
+    min-height: 30px;
+  }
+}
+
+.peopleLabel {
+  color: #7b4e4e;
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 7px;
+}
+
+.autoPerson {
+  background: #e6f6ef;
+  border: 1px solid #c8e7d8;
+  border-radius: 6px;
+  color: #0b5b47;
+  min-height: 38px;
+  padding: 9px 10px;
+
+  strong,
+  small {
+    display: block;
+  }
+
+  strong {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  small {
+    color: #346c5c;
+    font-size: 12px;
+    margin-top: 2px;
+  }
+}
+
+.peopleHint {
+  color: #756363;
+  display: block;
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 8px;
+}
+
+/* ─── Sections ─── */
+
+.section {
+  background: #ffffff;
+  border: 1px solid #eadbd8;
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(105, 38, 38, 0.04);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+
+.sectionHead {
+  align-items: center;
+  background: linear-gradient(90deg, #fff8f6, #ffffff);
+  border-bottom: 1px solid #eadbd8;
+  display: flex;
+  gap: 12px;
+  padding: 14px 18px;
+
+  span {
+    align-items: center;
+    background: #e4f4ed;
+    border-radius: 50%;
+    color: #0f6d55;
+    display: inline-flex;
+    font-size: 12px;
+    font-weight: 700;
+    height: 30px;
+    justify-content: center;
+    width: 30px;
+  }
+
+  h2 {
+    color: #2d2424;
+    font-size: 18px;
+    font-weight: 650;
+    margin: 0;
+  }
+}
+
+.fieldGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  padding: 18px;
+}
+
+.field {
+  display: block;
+
+  span {
+    display: block;
+    font-size: 14px;
+    font-weight: 650;
+    margin-bottom: 4px;
+  }
+
+  small {
+    color: #756363;
+    display: block;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-bottom: 8px;
+  }
+}
+
+/* ─── Feature table ─── */
+
+.featureTable {
+  overflow-x: hidden;
+  padding: 18px 18px 10px;
+}
+
+.featureHeader,
+.featureRow {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 2fr) minmax(86px, 0.7fr) minmax(86px, 0.7fr) minmax(0, 1.3fr) 38px;
+  min-width: 0;
+  width: 100%;
+}
+
+.featureHeader {
+  color: #7b4e4e;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.featureRow {
+  margin-bottom: 8px;
+}
+
+/* ─── Roles grid ─── */
+
+.rolesGrid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  padding: 18px;
+}
+
+.roleCard {
+  background: #fffaf9;
+  border: 1px solid #eadbd8;
+  border-radius: 8px;
+  padding: 12px;
+
+  textarea {
+    background: #ffffff;
+    min-height: 90px;
+  }
+}
+
+.roleHead {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 1fr 38px;
+  margin-bottom: 8px;
+}
+
+.iconButton {
+  align-items: center;
+  background: #ffffff;
+  border-color: #d8d1cf;
+  color: #7b4e4e;
+  display: inline-flex;
+  justify-content: center;
+  min-width: 38px;
+  padding: 0;
+}
+
+.secondaryButton {
+  background: #ffffff;
+  border-color: #d8d1cf;
+  color: #3a2f2f;
+  margin: 0 18px 18px;
+}
+
+/* ─── Action bar (sticky footer) ─── */
+
+.actionBar {
+  background: rgba(255, 250, 250, 0.96);
+  backdrop-filter: blur(8px);
+  border-top: 1px solid #eadbd8;
+  bottom: 0;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+  padding: 14px 0;
+  position: sticky;
+  z-index: 5;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #e81123, #a80000, #800080, #0078d4);
+  }
+
+  button {
+    background: #ffffff;
+  }
+}
+
+.primaryButton {
+  background: #0f6d55 !important;
+  border-color: #0f6d55 !important;
+  color: #ffffff;
+}
+
+/* ─── Responsive: Tablet landscape / small desktop (≤1280px) ─── */
+
+@media (max-width: 1280px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr) minmax(180px, 240px);
+  }
+
+  .recordsPanel {
+    grid-template-columns: minmax(180px, 0.4fr) auto minmax(0, 2fr);
+  }
+}
+
+/* ─── Responsive: Tablet portrait / narrow desktop (≤1040px) ─── */
+
+@media (max-width: 1040px) {
+  .header,
+  .recordsPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .fieldGrid,
+  .metaGrid,
+  .peopleGrid,
+  .rolesGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .featureHeader {
+    display: none;
+  }
+
+  .featureRow {
+    background: #fffaf9;
+    border: 1px solid #eadbd8;
+    border-radius: 8px;
+    grid-template-columns: 1fr;
+    min-width: 0;
+    padding: 10px;
+  }
+}
+
+/* ─── Responsive: Large phone landscape (≤768px) ─── */
+
+@media (max-width: 768px) {
+  .onyx {
+    padding: 20px clamp(14px, 3vw, 28px);
+  }
+
+  .header {
+    border-radius: 10px;
+    padding: 16px;
+
+    h1 {
+      font-size: 32px;
+    }
+  }
+
+  .progressCard {
+    span {
+      font-size: 22px;
+    }
+  }
+
+  .recordsPanel {
+    padding: 12px;
+  }
+
+  .section {
+    border-radius: 8px;
+  }
+
+  .fieldGrid,
+  .rolesGrid,
+  .featureTable {
+    padding: 14px;
+  }
+
+  .actionBar {
+    padding: 12px 0;
+  }
+}
+
+/* ─── Responsive: Phone portrait (≤560px) ─── */
+
+@media (max-width: 560px) {
+  .onyx {
+    padding: 14px 12px;
+  }
+
+  .header {
+    padding: 14px;
+
+    h1 {
+      font-size: 28px;
+    }
+  }
+
+  .brandRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .logo {
+    height: 52px;
+    width: 68px;
+  }
+
+  .sectionHead {
+    align-items: flex-start;
+
+    h2 {
+      font-size: 16px;
+    }
+  }
+
+  .fieldGrid,
+  .rolesGrid,
+  .featureTable {
+    padding: 12px;
+  }
+
+  .decisionActions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
+  }
+
+  .actionBar {
+    flex-direction: column;
+    padding: 12px 0;
+
+    button {
+      width: 100%;
+    }
+  }
+}
+
+/* ─── Responsive: Very small screens (≤380px) ─── */
+
+@media (max-width: 380px) {
+  .onyx {
+    padding: 10px 8px;
+  }
+
+  .header h1 {
+    font-size: 24px;
+  }
+
+  .progressCard {
+    padding: 10px;
+
+    span {
+      font-size: 20px;
+    }
+  }
+
+  .metaGrid {
+    gap: 10px;
+
+    label {
+      padding: 10px;
+    }
+  }
+}
+
+/* ─── Landscape orientation helper ─── */
+
+@media (orientation: landscape) and (max-height: 500px) {
+  .onyx {
+    padding: 10px clamp(20px, 4vw, 48px);
+  }
+
+  .header {
+    margin-bottom: 14px;
+    padding: 14px;
+
+    h1 {
+      font-size: 28px;
+    }
+  }
+
+  .startShell {
+    min-height: 50vh;
+    padding: 16px 0;
+  }
+
+  .startCard {
+    max-width: 520px;
+    padding: 20px;
+
+    h1 {
+      font-size: 32px;
+    }
+  }
+
+  .actionBar {
+    padding: 10px 0;
+  }
+}
