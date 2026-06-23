@@ -172,6 +172,35 @@ export default class OnyxSharePointService {
     return items as IMyBriefSummary[];
   }
 
+  public async getBriefDetails(briefId: number): Promise<{
+    brief: IOnyxBriefItem;
+    features: IOnyxFeatureItem[];
+    roles: IOnyxRoleItem[];
+  }> {
+    const brief = await this._sp.web.lists
+      .getByTitle(productBriefsList)
+      .items
+      .getById(briefId)();
+
+    const features = await this._sp.web.lists
+      .getByTitle(featuresList)
+      .items
+      .filter('BriefId eq ' + briefId)
+      .orderBy('SortOrder', true)();
+
+    const roles = await this._sp.web.lists
+      .getByTitle(rolesList)
+      .items
+      .filter('BriefId eq ' + briefId)
+      .orderBy('SortOrder', true)();
+
+    return {
+      brief: brief as unknown as IOnyxBriefItem,
+      features: features as unknown as IOnyxFeatureItem[],
+      roles: roles as unknown as IOnyxRoleItem[]
+    };
+  }
+
   public async updateBriefStatus(
     briefId: number,
     status: string,

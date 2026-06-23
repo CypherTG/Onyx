@@ -212,6 +212,20 @@ const getDecisionLabel = (status?: string): string => {
 
 
 
+const loadHtml2Pdf = (): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if ((window as any).html2pdf) {
+      resolve((window as any).html2pdf);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    script.onload = () => resolve((window as any).html2pdf);
+    script.onerror = () => reject(new Error('Failed to load html2pdf script from CDN.'));
+    document.head.appendChild(script);
+  });
+};
+
 const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   const opensFromLink = new URLSearchParams(window.location.search).has('onyxOpen') || new URLSearchParams(window.location.search).has('productBriefOpen');
   const queryBriefId = new URLSearchParams(window.location.search).get('briefId');
@@ -225,6 +239,278 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   const [myBriefs, setMyBriefs] = React.useState<IMyBriefSummary[]>([]);
   const [isLoadingBriefs, setIsLoadingBriefs] = React.useState<boolean>(false);
   const [decisionBriefId, setDecisionBriefId] = React.useState<number | undefined>();
+  const [selectedDetail, setSelectedDetail] = React.useState<{ brief: IOnyxBriefItem; features: IOnyxFeatureItem[]; roles: IOnyxRoleItem[] } | undefined>();
+  const [isLoadingDetails, setIsLoadingDetails] = React.useState<boolean>(false);
+  const [resolvedUserId, setResolvedUserId] = React.useState<number | undefined>(props.currentUserId);
+  const [activeTab, setActiveTab] = React.useState<'Submissions' | 'Drafts'>('Submissions');
+
+  const exportToPdf = React.useCallback(async () => {
+    if (!selectedDetail) return;
+    const { brief, features, roles } = selectedDetail;
+
+    const escapeHtml = (text?: string): string => {
+      if (!text) return 'N/A';
+      return text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;')
+        .replace(/\n/g, '<br />');
+    };
+
+    let featuresHtml = '';
+    if (features.length === 0) {
+      featuresHtml = '<p>No features specified.</p>';
+    } else {
+      featuresHtml = '<table style="width:100%; border-collapse:collapse; margin-top:8px;"><thead><tr><th style="width:30%; border:1px solid #e5e5e5; padding:6px 10px; text-align:left; font-size:12px; background:#fafafa; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Feature</th><th style="width:15%; border:1px solid #e5e5e5; padding:6px 10px; text-align:left; font-size:12px; background:#fafafa; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Priority</th><th style="width:15%; border:1px solid #e5e5e5; padding:6px 10px; text-align:left; font-size:12px; background:#fafafa; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Phase</th><th style="width:40%; border:1px solid #e5e5e5; padding:6px 10px; text-align:left; font-size:12px; background:#fafafa; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Notes</th></tr></thead><tbody>';
+      for (const f of features) {
+        featuresHtml += '<tr><td style="border:1px solid #e5e5e5; padding:6px 10px; font-size:12px; vertical-align:top;"><strong>' + escapeHtml(f.FeatureName) + '</strong></td><td style="border:1px solid #e5e5e5; padding:6px 10px; font-size:12px; vertical-align:top;">' + escapeHtml(f.Priority) + '</td><td style="border:1px solid #e5e5e5; padding:6px 10px; font-size:12px; vertical-align:top;">' + escapeHtml(f.Phase) + '</td><td style="border:1px solid #e5e5e5; padding:6px 10px; font-size:12px; vertical-align:top;">' + escapeHtml(f.Notes) + '</td></tr>';
+      }
+      featuresHtml += '</tbody></table>';
+    }
+
+    let rolesHtml = '';
+    if (roles.length === 0) {
+      rolesHtml = '<p>No user roles specified.</p>';
+    } else {
+      rolesHtml = '<table style="width:100%; border-collapse:collapse; margin-top:8px;"><thead><tr><th style="width:30%; border:1px solid #e5e5e5; padding:6px 10px; text-align:left; font-size:12px; background:#fafafa; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Role</th><th style="width:70%; border:1px solid #e5e5e5; padding:6px 10px; text-align:left; font-size:12px; background:#fafafa; font-weight:600; text-transform:uppercase; letter-spacing:0.3px;">Permissions / Capabilities</th></tr></thead><tbody>';
+      for (const r of roles) {
+        rolesHtml += '<tr><td style="border:1px solid #e5e5e5; padding:6px 10px; font-size:12px; vertical-align:top;"><strong>' + escapeHtml(r.RoleName) + '</strong></td><td style="border:1px solid #e5e5e5; padding:6px 10px; font-size:12px; vertical-align:top;">' + escapeHtml(r.Permissions) + '</td></tr>';
+      }
+      rolesHtml += '</tbody></table>';
+    }
+
+    const htmlContent = `
+      <div style="font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1a1a1a; line-height: 1.5; padding: 20px; background: #ffffff;">
+        <div style="border-bottom: 2px solid #a8201a; padding-bottom: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-end;">
+          <div>
+            <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #a8201a; font-weight: 600; margin-bottom: 4px;">Onyx Request Archive</div>
+            <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.5px;">${escapeHtml(brief.ProductName)}</h1>
+          </div>
+          <div style="text-align: right; font-size: 11px; color: #666666;">
+            ID: #${(brief as any).Id}<br />
+            Date: ${new Date().toLocaleDateString()}
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; background: #fafafa; border: 1px solid #e5e5e5; padding: 12px; font-size: 12px;">
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">Department</strong>
+            ${escapeHtml(brief.Department)}
+          </div>
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">Priority</strong>
+            ${escapeHtml(brief.BriefPriority)}
+          </div>
+          <div style="margin-bottom: 8px;">
+            <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">Target Date</strong>
+            ${escapeHtml(brief.TargetDate)}
+          </div>
+          <div>
+            <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">Version</strong>
+            ${escapeHtml(brief.BriefVersion)}
+          </div>
+          <div>
+            <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">Workflow Status</strong>
+            ${escapeHtml(brief.Status)}
+          </div>
+          <div>
+            <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">One-Line Summary</strong>
+            ${escapeHtml(brief.OneLineSummary || (brief as any).Title)}
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">01 Product Overview</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Product Description</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.ProductDescription)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Current Process / What it Replaces</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.CurrentProcess)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">02 The Problem</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Current Situation</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.CurrentSituation)}</div>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Root Cause</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.RootCause)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Opportunity</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.Opportunity)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">03 Goals & Success</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Main Goal</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.MainGoal)}</div>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Objectives</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.Objectives)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Success Definition</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.SuccessDefinition)}</div>
+          </div>
+        </div>
+
+        <div style="page-break-before: always; padding-top: 10px; margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">04 Target Users</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Primary Users</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.PrimaryUsers)}</div>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Secondary Users</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.SecondaryUsers)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">User Personas</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.UserPersonas)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">05 Scope</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">In Scope Items</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.InScopeItems)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Out of Scope Items</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.OutOfScopeItems)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px; page-break-inside: avoid;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">06 Proposed Features</h2>
+          ${featuresHtml}
+        </div>
+
+        <div style="margin-bottom: 20px; page-break-inside: avoid;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">07 User Roles & Permissions</h2>
+          ${rolesHtml}
+        </div>
+
+        <div style="page-break-before: always; padding-top: 10px; margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">08 Other Requirements</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Security & Access</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.SecurityRequirements)}</div>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Performance Requirements</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.PerformanceRequirements)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Compliance Requirements</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.ComplianceRequirements)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">09 Risks & Assumptions</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Risks</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.Risks)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Assumptions</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.Assumptions)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; color: #a8201a; border-bottom: 1px solid #e5e5e5; padding-bottom: 4px; margin-bottom: 10px; font-weight: 600;">10 Measurement & Future</h2>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">KPIs and Success Metrics</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.KpisAndSuccessMetrics)}</div>
+          </div>
+          <div style="margin-bottom: 10px;">
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Future Ideas</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.FutureIdeas)}</div>
+          </div>
+          <div>
+            <strong style="display: block; font-size: 11px; color: #555555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 2px;">Open Questions</strong>
+            <div style="font-size: 13px; white-space: pre-wrap;">${escapeHtml(brief.OpenQuestions)}</div>
+          </div>
+        </div>
+
+        <div style="margin-top: 30px; border-top: 1px solid #e5e5e5; padding-top: 10px; font-size: 10px; color: #666666; text-align: center;">
+          Confidential - Onyx Product Development Brief System
+        </div>
+      </div>
+    `;
+
+    setMessage({ type: 'info', text: 'Generating PDF...' });
+
+    try {
+      const html2pdf = await loadHtml2Pdf();
+      const element = document.createElement('div');
+      element.style.position = 'absolute';
+      element.style.left = '-9999px';
+      element.style.top = '-9999px';
+      element.style.width = '800px';
+      element.innerHTML = htmlContent;
+      document.body.appendChild(element);
+
+      const opt = {
+        margin:       15,
+        filename:     `${brief.ProductName || 'Onyx_Brief'}_#${(brief as any).Id || 'Draft'}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true, logging: false },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdf().from(element).set(opt).save();
+      document.body.removeChild(element);
+      setMessage({ type: 'success', text: 'PDF downloaded successfully!' });
+    } catch (err) {
+      console.error('html2pdf error, falling back to native print window:', err);
+      // Fallback: popup window print
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.open();
+        printWindow.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8" />
+            <title>Onyx Product Brief - ${escapeHtml(brief.ProductName)}</title>
+            <style>
+              body { font-family: system-ui, sans-serif; margin: 40px; }
+            </style>
+          </head>
+          <body>
+            ${htmlContent}
+            <script>
+              window.onload = function() {
+                setTimeout(function() {
+                  window.print();
+                }, 300);
+              };
+            </script>
+          </body>
+          </html>
+        `);
+        printWindow.document.close();
+        setMessage(undefined);
+      } else {
+        setMessage({ type: 'error', text: 'Failed to open print window. Please allow popups.' });
+      }
+    }
+  }, [selectedDetail]);
 
   const stopPropagationRef = React.useCallback((el: HTMLTextAreaElement | null) => {
     if (el && !el.dataset.shielded) {
@@ -245,6 +531,32 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
     () => new OnyxSharePointService(props.context, props.dataSiteUrl, props.staffDirectorySiteUrl),
     [props.context, props.dataSiteUrl, props.staffDirectorySiteUrl]
   );
+
+  React.useEffect(() => {
+    let isMounted = true;
+    const resolveUserId = async (): Promise<void> => {
+      if (props.currentUserId) {
+        setResolvedUserId(props.currentUserId);
+        return;
+      }
+      if (!props.currentUserEmail) {
+        return;
+      }
+      try {
+        const id = await service.ensureUserId(props.currentUserEmail);
+        if (isMounted && id) {
+          setResolvedUserId(id);
+        }
+      } catch (error) {
+        // ignore
+      }
+    };
+    resolveUserId().catch(() => undefined);
+    return () => {
+      isMounted = false;
+    };
+  }, [props.currentUserId, props.currentUserEmail, service]);
+
   const isAdmin = React.useMemo((): boolean => {
     const urlParams = new URLSearchParams(window.location.search);
     const hasAdminParam = urlParams.has('admin') || urlParams.get('admin') === 'true' || urlParams.has('onyxAdmin') || urlParams.has('productBriefAdmin');
@@ -266,14 +578,15 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   }, [props.adminEmails, props.currentUserEmail]);
 
   const loadMyBriefs = React.useCallback(async (): Promise<void> => {
-    if (!isAdmin && !props.currentUserId) {
+    const userId = resolvedUserId || props.currentUserId;
+    if (!isAdmin && !userId) {
       return;
     }
 
     setIsLoadingBriefs(true);
 
     try {
-      setMyBriefs(isAdmin ? await service.getAllBriefs() : await service.getMyBriefs(props.currentUserId));
+      setMyBriefs(isAdmin ? await service.getAllBriefs() : await service.getMyBriefs(userId));
     } catch (error) {
       setMessage({
         type: 'info',
@@ -282,7 +595,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
     } finally {
       setIsLoadingBriefs(false);
     }
-  }, [isAdmin, props.currentUserId, service]);
+  }, [isAdmin, resolvedUserId, props.currentUserId, service]);
 
   React.useEffect(() => {
     let isMounted = true;
@@ -415,7 +728,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
 
     try {
       const decisionDate = new Date().toISOString();
-      await service.updateBriefStatus(briefId, status, decisionComment, props.currentUserId);
+      await service.updateBriefStatus(briefId, status, decisionComment, resolvedUserId || props.currentUserId);
       setMyBriefs((current: IMyBriefSummary[]) => current.map((brief: IMyBriefSummary) => {
         return brief.Id === briefId ? { ...brief, DecisionComment: decisionComment, DecisionDate: decisionDate, Status: status } : brief;
       }));
@@ -425,6 +738,121 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
       setMessage({ type: 'error', text: errorMessage });
     } finally {
       setDecisionBriefId(undefined);
+    }
+  };
+
+  const loadBriefDetails = async (briefId: number): Promise<void> => {
+    setIsLoadingDetails(true);
+    try {
+      const details = await service.getBriefDetails(briefId);
+      setSelectedDetail(details);
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to load details for brief #' + briefId });
+    } finally {
+      setIsLoadingDetails(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (highlightBriefId) {
+      const autoLoad = async (): Promise<void> => {
+        setIsLoadingDetails(true);
+        try {
+          const details = await service.getBriefDetails(highlightBriefId);
+          if ((details.brief.Status || '').toLowerCase() === 'draft') {
+            setForm({
+              ProductName: details.brief.ProductName || '',
+              OneLineSummary: details.brief.OneLineSummary || '',
+              BriefVersion: details.brief.BriefVersion || 'v1.0',
+              Department: details.brief.Department || '',
+              TargetDate: details.brief.TargetDate || '',
+              BriefPriority: details.brief.BriefPriority || 'Medium',
+              Status: 'Draft',
+              ProductDescription: details.brief.ProductDescription || '',
+              CurrentProcess: details.brief.CurrentProcess || '',
+              CurrentSituation: details.brief.CurrentSituation || '',
+              RootCause: details.brief.RootCause || '',
+              Opportunity: details.brief.Opportunity || '',
+              MainGoal: details.brief.MainGoal || '',
+              Objectives: details.brief.Objectives || '',
+              SuccessDefinition: details.brief.SuccessDefinition || '',
+              PrimaryUsers: details.brief.PrimaryUsers || '',
+              SecondaryUsers: details.brief.SecondaryUsers || '',
+              UserPersonas: details.brief.UserPersonas || '',
+              InScopeItems: details.brief.InScopeItems || '',
+              OutOfScopeItems: details.brief.OutOfScopeItems || '',
+              SecurityRequirements: details.brief.SecurityRequirements || '',
+              PerformanceRequirements: details.brief.PerformanceRequirements || '',
+              ComplianceRequirements: details.brief.ComplianceRequirements || '',
+              Risks: details.brief.Risks || '',
+              Assumptions: details.brief.Assumptions || '',
+              KpisAndSuccessMetrics: details.brief.KpisAndSuccessMetrics || '',
+              FutureIdeas: details.brief.FutureIdeas || '',
+              OpenQuestions: details.brief.OpenQuestions || ''
+            });
+            setFeatures(details.features.length > 0 ? details.features : initialFeatures);
+            setRoles(details.roles.length > 0 ? details.roles : initialRoles);
+          } else {
+            setSelectedDetail(details);
+          }
+          setIsAppOpen(true);
+        } catch (error) {
+          // ignore
+        } finally {
+          setIsLoadingDetails(false);
+        }
+      };
+      autoLoad().catch(() => undefined);
+    }
+  }, [highlightBriefId, service]);
+
+  const resumeDraft = async (briefId: number): Promise<void> => {
+    setIsLoadingDetails(true);
+    try {
+      const details = await service.getBriefDetails(briefId);
+      setForm({
+        ProductName: details.brief.ProductName || '',
+        OneLineSummary: details.brief.OneLineSummary || '',
+        BriefVersion: details.brief.BriefVersion || 'v1.0',
+        Department: details.brief.Department || '',
+        TargetDate: details.brief.TargetDate || '',
+        BriefPriority: details.brief.BriefPriority || 'Medium',
+        Status: 'Draft',
+        ProductDescription: details.brief.ProductDescription || '',
+        CurrentProcess: details.brief.CurrentProcess || '',
+        CurrentSituation: details.brief.CurrentSituation || '',
+        RootCause: details.brief.RootCause || '',
+        Opportunity: details.brief.Opportunity || '',
+        MainGoal: details.brief.MainGoal || '',
+        Objectives: details.brief.Objectives || '',
+        SuccessDefinition: details.brief.SuccessDefinition || '',
+        PrimaryUsers: details.brief.PrimaryUsers || '',
+        SecondaryUsers: details.brief.SecondaryUsers || '',
+        UserPersonas: details.brief.UserPersonas || '',
+        InScopeItems: details.brief.InScopeItems || '',
+        OutOfScopeItems: details.brief.OutOfScopeItems || '',
+        SecurityRequirements: details.brief.SecurityRequirements || '',
+        PerformanceRequirements: details.brief.PerformanceRequirements || '',
+        ComplianceRequirements: details.brief.ComplianceRequirements || '',
+        Risks: details.brief.Risks || '',
+        Assumptions: details.brief.Assumptions || '',
+        KpisAndSuccessMetrics: details.brief.KpisAndSuccessMetrics || '',
+        FutureIdeas: details.brief.FutureIdeas || '',
+        OpenQuestions: details.brief.OpenQuestions || ''
+      });
+      setFeatures(details.features.length > 0 ? details.features : initialFeatures);
+      setRoles(details.roles.length > 0 ? details.roles : initialRoles);
+      
+      setMessage({ type: 'success', text: 'Draft ' + (details.brief.ProductName || '#' + briefId) + ' loaded! Scroll down to edit and submit.' });
+      
+      const formElement = document.querySelector(`.${styles.metaGrid}`);
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: 'Failed to load draft details.' });
+    } finally {
+      setIsLoadingDetails(false);
     }
   };
 
@@ -488,7 +916,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
 
   const notifyAdminFlow = async (briefId: number, status: string): Promise<void> => {
     const pageUrl = window.location.href.split('?')[0];
-    const itemUrl = pageUrl + '?productBriefOpen=true&admin=true&briefId=' + briefId;
+    const itemUrl = pageUrl + '?productBriefOpen=true&admin=true&briefId=' + briefId + '#onyx-app-root';
     const response = await fetch(props.adminFlowUrl, {
       body: JSON.stringify({
         briefId: briefId,
@@ -595,7 +1023,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
 
   if (!isAppOpen) {
     return (
-      <section className={styles.onyx}>
+      <section id="onyx-app-root" className={styles.onyx}>
         <div className={styles.startShell}>
           <div className={styles.startCard}>
             <img src={require('../assets/kcc.png')} alt="Konstructum" className={styles.startLogo} />
@@ -611,7 +1039,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   }
 
   return (
-    <section className={`${styles.onyx} ${styles.onyxOpen}`}>
+    <section id="onyx-app-root" className={`${styles.onyx} ${styles.onyxOpen}`}>
       <div className={styles.previewBar}>
         <span>Preview</span>
         <button type="button" onClick={closePreview}>Close preview</button>
@@ -646,27 +1074,58 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
       )}
 
       <section className={styles.recordsPanel}>
-        <div>
+        <div className={styles.dashboardHeaderColumn}>
           <h2>{isAdmin ? 'Submission Dashboard' : 'My Records'}</h2>
           <p>{isAdmin ? 'Admin view across recent Product Brief submissions.' : 'Drafts and submissions created by you.'}</p>
-        </div>
-        <div className={styles.recordsActions}>
-          <button type="button" className={styles.secondaryButtonCompact} onClick={() => loadMyBriefs()} disabled={isLoadingBriefs}>
-            {isLoadingBriefs ? 'Loading...' : 'Refresh'}
-          </button>
-          <button type="button" className={styles.secondaryButtonCompact} onClick={exportRecords} disabled={myBriefs.length === 0}>
-            Export CSV
-          </button>
+          {!isAdmin && (
+            <div className={styles.tabBar} style={{ marginTop: '16px' }}>
+              <button
+                type="button"
+                className={`${styles.tabItem} ${activeTab === 'Submissions' ? styles.tabItemActive : ''}`}
+                onClick={() => setActiveTab('Submissions')}
+              >
+                Submissions ({myBriefs.filter((b) => (b.Status || '').toLowerCase() !== 'draft').length})
+              </button>
+              <button
+                type="button"
+                className={`${styles.tabItem} ${activeTab === 'Drafts' ? styles.tabItemActive : ''}`}
+                onClick={() => setActiveTab('Drafts')}
+              >
+                Drafts ({myBriefs.filter((b) => (b.Status || '').toLowerCase() === 'draft').length})
+              </button>
+            </div>
+          )}
+          <div className={styles.recordsActions}>
+            <button type="button" className={styles.secondaryButtonCompact} onClick={() => loadMyBriefs()} disabled={isLoadingBriefs}>
+              {isLoadingBriefs ? 'Loading...' : 'Refresh'}
+            </button>
+            <button type="button" className={styles.secondaryButtonCompact} onClick={exportRecords} disabled={myBriefs.length === 0}>
+              Export CSV
+            </button>
+          </div>
         </div>
         <div className={styles.recordsList}>
-          {myBriefs.length === 0 && <span className={styles.emptyState}>No saved records yet.</span>}
-          {myBriefs.map((brief: IMyBriefSummary) => (
+          {(!isAdmin ? myBriefs.filter((b) => activeTab === 'Submissions' ? (b.Status || '').toLowerCase() !== 'draft' : (b.Status || '').toLowerCase() === 'draft') : myBriefs).length === 0 && (
+            <span className={styles.emptyState}>
+              {activeTab === 'Drafts' ? 'No saved drafts found.' : 'No submitted records yet.'}
+            </span>
+          )}
+          {(!isAdmin ? myBriefs.filter((b) => activeTab === 'Submissions' ? (b.Status || '').toLowerCase() !== 'draft' : (b.Status || '').toLowerCase() === 'draft') : myBriefs).map((brief: IMyBriefSummary) => (
             <div
               id={`record-item-${brief.Id}`}
-              style={brief.Id === highlightBriefId ? { border: '2px solid #0078d4', backgroundColor: 'rgba(0, 120, 212, 0.05)' } : undefined}
-              className={styles.recordItem}
+              style={brief.Id === highlightBriefId ? { borderColor: '#1a1a1a', backgroundColor: '#fafafa', borderWidth: '2px' } : undefined}
+              className={`${styles.recordItem} ${selectedDetail && selectedDetail.brief.ProductName === brief.ProductName ? styles.recordItemActive : ''}`}
               key={brief.Id}
-              onClick={isAdmin ? shieldFromSharePoint : undefined}
+              onClick={(event: React.MouseEvent<HTMLDivElement>) => {
+                if (isAdmin) {
+                  shieldFromSharePoint(event);
+                }
+                if ((brief.Status || '').toLowerCase() === 'draft') {
+                  resumeDraft(brief.Id).catch(() => undefined);
+                } else {
+                  loadBriefDetails(brief.Id).catch(() => undefined);
+                }
+              }}
               onFocus={isAdmin ? shieldFromSharePoint : undefined}
               onMouseDown={isAdmin ? shieldFromSharePoint : undefined}
               onKeyDown={isAdmin ? shieldFromSharePoint : undefined}
@@ -730,6 +1189,129 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
           ))}
         </div>
       </section>
+
+      {(isLoadingDetails || selectedDetail) && (
+        <div className={styles.detailsTakeover} onClick={() => setSelectedDetail(undefined)}>
+          <div className={styles.detailsDocument} onClick={shieldFromSharePoint}>
+            {isLoadingDetails ? (
+              <div className={styles.detailsLoading}>
+                <span className={styles.emptyState}>Loading specification details...</span>
+              </div>
+            ) : (
+              selectedDetail && (
+                <>
+                  <div className={styles.detailsHeader}>
+                    <div>
+                      <div className={styles.documentBadge}>Read-Only Request Archive</div>
+                      <h3>{selectedDetail.brief.ProductName || 'Untitled brief'}</h3>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button type="button" className={styles.secondaryButtonCompact} onClick={exportToPdf}>
+                        Export PDF
+                      </button>
+                      <button type="button" className={styles.secondaryButtonCompact} onClick={() => setSelectedDetail(undefined)}>
+                        Close Brief
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className={styles.documentArchiveInfo}>
+                    <span>Locked Record</span>
+                    <p>This is a read-only document representing the brief of the request submitted by staff. It cannot be modified.</p>
+                  </div>
+                  
+                  <div className={styles.detailsContent}>
+                    <div className={styles.detailsMeta}>
+                      <span><strong>Department:</strong> {selectedDetail.brief.Department || 'N/A'}</span>
+                      <span><strong>Priority:</strong> {selectedDetail.brief.BriefPriority || 'N/A'}</span>
+                      <span><strong>Target Date:</strong> {selectedDetail.brief.TargetDate || 'N/A'}</span>
+                      <span><strong>Version:</strong> {selectedDetail.brief.BriefVersion || 'N/A'}</span>
+                      <span><strong>Status:</strong> {selectedDetail.brief.Status || 'N/A'}</span>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Overview</h4>
+                      <p><strong>Description:</strong> {selectedDetail.brief.ProductDescription || 'N/A'}</p>
+                      <p><strong>Replaces/Improves:</strong> {selectedDetail.brief.CurrentProcess || 'N/A'}</p>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>The Problem</h4>
+                      <p><strong>Current Situation:</strong> {selectedDetail.brief.CurrentSituation || 'N/A'}</p>
+                      <p><strong>Root Cause:</strong> {selectedDetail.brief.RootCause || 'N/A'}</p>
+                      <p><strong>Opportunity:</strong> {selectedDetail.brief.Opportunity || 'N/A'}</p>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Goals & Success Definition</h4>
+                      <p><strong>Main Goal:</strong> {selectedDetail.brief.MainGoal || 'N/A'}</p>
+                      <p><strong>Objectives:</strong> {selectedDetail.brief.Objectives || 'N/A'}</p>
+                      <p><strong>Success Definition:</strong> {selectedDetail.brief.SuccessDefinition || 'N/A'}</p>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Target Users & Scope</h4>
+                      <p><strong>Primary Users:</strong> {selectedDetail.brief.PrimaryUsers || 'N/A'}</p>
+                      <p><strong>Secondary Users:</strong> {selectedDetail.brief.SecondaryUsers || 'N/A'}</p>
+                      <p><strong>User Personas:</strong> {selectedDetail.brief.UserPersonas || 'N/A'}</p>
+                      <p><strong>In Scope:</strong> {selectedDetail.brief.InScopeItems || 'N/A'}</p>
+                      <p><strong>Out of Scope:</strong> {selectedDetail.brief.OutOfScopeItems || 'N/A'}</p>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Proposed Features</h4>
+                      {selectedDetail.features.length === 0 ? <p>No features specified.</p> : (
+                        <div className={styles.detailsList}>
+                          {selectedDetail.features.map((f, i) => (
+                            <div key={i} className={styles.detailsListItem}>
+                              <strong>{f.FeatureName}</strong> ({f.Priority} · {f.Phase})
+                              {f.Notes && <p className={styles.detailsListItemNotes}>{f.Notes}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>User Roles & Permissions</h4>
+                      {selectedDetail.roles.length === 0 ? <p>No user roles specified.</p> : (
+                        <div className={styles.detailsList}>
+                          {selectedDetail.roles.map((r, i) => (
+                            <div key={i} className={styles.detailsListItem}>
+                              <strong>{r.RoleName}</strong>
+                              {r.Permissions && <p className={styles.detailsListItemNotes}>{r.Permissions}</p>}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Non-Functional Requirements</h4>
+                      <p><strong>Security:</strong> {selectedDetail.brief.SecurityRequirements || 'N/A'}</p>
+                      <p><strong>Performance:</strong> {selectedDetail.brief.PerformanceRequirements || 'N/A'}</p>
+                      <p><strong>Compliance:</strong> {selectedDetail.brief.ComplianceRequirements || 'N/A'}</p>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Risks & Assumptions</h4>
+                      <p><strong>Risks:</strong> {selectedDetail.brief.Risks || 'N/A'}</p>
+                      <p><strong>Assumptions:</strong> {selectedDetail.brief.Assumptions || 'N/A'}</p>
+                    </div>
+
+                    <div className={styles.detailsSection}>
+                      <h4>Measurement & Future Phases</h4>
+                      <p><strong>KPIs:</strong> {selectedDetail.brief.KpisAndSuccessMetrics || 'N/A'}</p>
+                      <p><strong>Future Ideas:</strong> {selectedDetail.brief.FutureIdeas || 'N/A'}</p>
+                      <p><strong>Open Questions:</strong> {selectedDetail.brief.OpenQuestions || 'N/A'}</p>
+                    </div>
+                  </div>
+                </>
+              )
+            )}
+          </div>
+        </div>
+      )}
 
       <div className={styles.metaGrid}>
         <label>
