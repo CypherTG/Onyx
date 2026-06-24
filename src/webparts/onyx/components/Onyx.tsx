@@ -211,24 +211,9 @@ const getDecisionLabel = (status?: string): string => {
 };
 
 
-
-const loadHtml2Pdf = (): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    if ((window as any).html2pdf) {
-      resolve((window as any).html2pdf);
-      return;
-    }
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
-    script.onload = () => resolve((window as any).html2pdf);
-    script.onerror = () => reject(new Error('Failed to load html2pdf script from CDN.'));
-    document.head.appendChild(script);
-  });
-};
-
 const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   const opensFromLink = new URLSearchParams(window.location.search).has('onyxOpen') || new URLSearchParams(window.location.search).has('productBriefOpen');
-  const queryBriefId = new URLSearchParams(window.location.search).get('briefId');
+  const queryBriefId = new URLSearchParams(window.location.search).get('onyxBriefId') || new URLSearchParams(window.location.search).get('briefId');
   const highlightBriefId = queryBriefId ? parseInt(queryBriefId, 10) : undefined;
   const [isAppOpen, setIsAppOpen] = React.useState<boolean>(opensFromLink);
   const [form, setForm] = React.useState<IOnyxFormState>(initialFormState);
@@ -244,9 +229,10 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   const [resolvedUserId, setResolvedUserId] = React.useState<number | undefined>(props.currentUserId);
   const [activeTab, setActiveTab] = React.useState<'Submissions' | 'Drafts'>('Submissions');
 
-  const exportToPdf = React.useCallback(async () => {
+  const downloadPdf = React.useCallback(async () => {
     if (!selectedDetail) return;
     const { brief, features, roles } = selectedDetail;
+    const typedBrief = brief as IOnyxBriefItem & { Id?: number; Title?: string };
 
     const escapeHtml = (text?: string): string => {
       if (!text) return 'N/A';
@@ -289,7 +275,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
             <h1 style="margin: 0; font-size: 24px; font-weight: 700; color: #1a1a1a; letter-spacing: -0.5px;">${escapeHtml(brief.ProductName)}</h1>
           </div>
           <div style="text-align: right; font-size: 11px; color: #666666;">
-            ID: #${(brief as any).Id}<br />
+            ID: #${typedBrief.Id || ''}<br />
             Date: ${new Date().toLocaleDateString()}
           </div>
         </div>
@@ -317,7 +303,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
           </div>
           <div>
             <strong style="color: #444444; display: block; font-weight: 600; margin-bottom: 2px;">One-Line Summary</strong>
-            ${escapeHtml(brief.OneLineSummary || (brief as any).Title)}
+            ${escapeHtml(brief.OneLineSummary || typedBrief.Title)}
           </div>
         </div>
 
@@ -453,62 +439,35 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
       </div>
     `;
 
-    setMessage({ type: 'info', text: 'Generating PDF...' });
+    setMessage({ type: 'info', text: 'Preparing file...' });
 
     try {
-      const html2pdf = await loadHtml2Pdf();
-      const element = document.createElement('div');
-      element.style.position = 'absolute';
-      element.style.left = '-9999px';
-      element.style.top = '-9999px';
-      element.style.width = '800px';
-      element.innerHTML = htmlContent;
-      document.body.appendChild(element);
-
-      const opt = {
-        margin:       15,
-        filename:     `${brief.ProductName || 'Onyx_Brief'}_#${(brief as any).Id || 'Draft'}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { scale: 2, useCORS: true, logging: false },
-        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      await html2pdf().from(element).set(opt).save();
-      document.body.removeChild(element);
-      setMessage({ type: 'success', text: 'PDF downloaded successfully!' });
-    } catch (err) {
-      console.error('html2pdf error, falling back to native print window:', err);
-      // Fallback: popup window print
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.open();
-        printWindow.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8" />
-            <title>Onyx Product Brief - ${escapeHtml(brief.ProductName)}</title>
-            <style>
-              body { font-family: system-ui, sans-serif; margin: 40px; }
-            </style>
-          </head>
-          <body>
-            ${htmlContent}
-            <script>
-              window.onload = function() {
-                setTimeout(function() {
-                  window.print();
-                }, 300);
-              };
-            </script>
-          </body>
-          </html>
-        `);
-        printWindow.document.close();
-        setMessage(undefined);
-      } else {
-        setMessage({ type: 'error', text: 'Failed to open print window. Please allow popups.' });
-      }
+      const htmlFileContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Onyx Product Brief - ${escapeHtml(brief.ProductName)}</title>
+          <style>
+            body { font-family: system-ui, -apple-system, sans-serif; margin: 40px; color: #1a1a1a; line-height: 1.5; }
+          </style>
+        </head>
+        <body>
+          ${htmlContent}
+        </body>
+        </html>
+      `;
+      const blob = new Blob([htmlFileContent], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${brief.ProductName || 'Onyx_Brief'}_#${typedBrief.Id || 'Draft'}.html`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setMessage({ type: 'success', text: 'Brief downloaded successfully as HTML.' });
+    } catch (fallbackErr) {
+      console.error('HTML download failed:', fallbackErr);
+      setMessage({ type: 'error', text: 'Failed to download the brief file.' });
     }
   }, [selectedDetail]);
 
@@ -915,8 +874,9 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   };
 
   const notifyAdminFlow = async (briefId: number, status: string): Promise<void> => {
-    const pageUrl = window.location.href.split('?')[0];
-    const itemUrl = pageUrl + '?productBriefOpen=true&admin=true&briefId=' + briefId + '#onyx-app-root';
+    // Construct absolute hosting page URL reliably using window location
+    const absolutePageUrl = window.location.href.split('?')[0].split('#')[0];
+    const itemUrl = absolutePageUrl + '?onyxOpen=true&onyxAdmin=true&onyxBriefId=' + briefId + '#onyx-app-root';
     const response = await fetch(props.adminFlowUrl, {
       body: JSON.stringify({
         briefId: briefId,
@@ -1206,8 +1166,8 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
                       <h3>{selectedDetail.brief.ProductName || 'Untitled brief'}</h3>
                     </div>
                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                      <button type="button" className={styles.secondaryButtonCompact} onClick={exportToPdf}>
-                        Export PDF
+                      <button type="button" className={styles.secondaryButtonCompact} onClick={downloadPdf}>
+                        Download HTML
                       </button>
                       <button type="button" className={styles.secondaryButtonCompact} onClick={() => setSelectedDetail(undefined)}>
                         Close Brief
