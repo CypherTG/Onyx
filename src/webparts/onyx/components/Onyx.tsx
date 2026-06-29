@@ -1010,12 +1010,17 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   if (!isAppOpen) {
     return (
       <section id="onyx-app-root" className={styles.onyx}>
+        {message && (
+          <div className={`${styles.message} ${styles[message.type]}`} style={{ marginBottom: '16px', width: '100%', maxWidth: '480px', marginLeft: 'auto', marginRight: 'auto' }}>
+            {message.text}
+          </div>
+        )}
         <div className={styles.startShell}>
           <div className={styles.startCard}>
             <img src={require('../assets/kcc.png')} alt="Konstructum" className={styles.startLogo} />
             <h1 style={{ marginTop: '8px' }}>Product Brief</h1>
             <p>Submit a structured product brief to the ORBIT build team.</p>
-            <button type="button" className={styles.primaryButton} onClick={() => setIsAppOpen(true)}>
+            <button type="button" className={styles.primaryButton} onClick={() => { setIsAppOpen(true); setMessage(undefined); }}>
               Open Product Brief
             </button>
           </div>
@@ -1051,11 +1056,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
         </div>
       </div>
 
-      {message && (message.text.indexOf('saved as') > -1 || message.text.indexOf('saved') > -1 || message.text.indexOf('decision') > -1 || message.text.indexOf('PRD') > -1) && (
-        <div className={`${styles.message} ${styles[message.type]}`}>{message.text}</div>
-      )}
-
-      {message && message.text.indexOf('saved as') === -1 && message.text.indexOf('saved') === -1 && message.text.indexOf('decision') === -1 && message.text.indexOf('PRD') === -1 && message.text.indexOf('SharePoint item ID') === -1 && (
+      {message && (
         <div className={`${styles.message} ${styles[message.type]}`}>{message.text}</div>
       )}
 
