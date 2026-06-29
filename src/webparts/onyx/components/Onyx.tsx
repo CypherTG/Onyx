@@ -220,6 +220,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   const [features, setFeatures] = React.useState<IOnyxFeatureItem[]>(initialFeatures);
   const [roles, setRoles] = React.useState<IOnyxRoleItem[]>(initialRoles);
   const [isSaving, setIsSaving] = React.useState<boolean>(false);
+  const [savingStatus, setSavingStatus] = React.useState<'Draft' | 'Submitted' | null>(null);
   const [message, setMessage] = React.useState<IMessageState | undefined>();
   const [myBriefs, setMyBriefs] = React.useState<IMyBriefSummary[]>([]);
   const [isLoadingBriefs, setIsLoadingBriefs] = React.useState<boolean>(false);
@@ -902,15 +903,20 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
   };
 
   const saveBrief = async (status: string): Promise<void> => {
-    const validationMessage = validate();
+    if (isSaving) return;
 
+    const validationMessage = validate();
     if (validationMessage) {
       setMessage({ type: 'error', text: validationMessage });
       return;
     }
 
     setIsSaving(true);
-    setMessage({ type: 'info', text: 'Saving product brief...' });
+    setSavingStatus(status as 'Draft' | 'Submitted');
+    setMessage({ 
+      type: 'info', 
+      text: status === 'Submitted' ? 'Submitting product brief...' : 'Saving product brief draft...' 
+    });
 
     const submitterId = props.currentUserId || await service.ensureUserId(props.currentUserEmail);
 
@@ -923,12 +929,31 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
 
     try {
       const result = await service.saveBrief(brief, features, roles);
-      setForm((current: IOnyxFormState) => ({ ...current, Status: status }));
+      
+      if (status === 'Submitted') {
+        // Reset the form fields for submitted briefs
+        setForm(initialFormState);
+        setFeatures(initialFeatures);
+        setRoles(initialRoles);
+        // Close the form and return to the dashboard
+        setIsAppOpen(false);
+      } else {
+        // Keep draft open but update local status
+        setForm((current: IOnyxFormState) => ({ ...current, Status: status }));
+      }
+      
+      await loadMyBriefs();
+
       if (status === 'Submitted' && props.adminFlowUrl) {
         await notifyAdminFlow(result.briefId, status);
       }
-      setMessage({ type: 'success', text: 'Product brief saved. SharePoint item ID: ' + result.briefId + '.' });
-      await loadMyBriefs();
+      
+      setMessage({ 
+        type: 'success', 
+        text: status === 'Submitted' 
+          ? 'Your product brief has been successfully submitted! SharePoint item ID: ' + result.briefId + '.'
+          : 'Your draft has been saved successfully. SharePoint item ID: ' + result.briefId + '.'
+      });
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'The brief could not be saved.';
       setMessage({
@@ -939,6 +964,7 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
       });
     } finally {
       setIsSaving(false);
+      setSavingStatus(null);
     }
   };
 
@@ -1391,8 +1417,12 @@ const Onyx: React.FC<IOnyxProps> = (props: IOnyxProps) => {
       <div className={styles.actionBar}>
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-            <button type="button" disabled={isSaving} onClick={() => saveBrief('Draft')}>Save draft</button>
-            <button type="button" disabled={isSaving} className={styles.primaryButton} onClick={() => saveBrief('Submitted')}>Submit brief</button>
+            <button type="button" disabled={isSaving} onClick={() => saveBrief('Draft')}>
+              {savingStatus === 'Draft' ? 'Saving draft...' : 'Save draft'}
+            </button>
+            <button type="button" disabled={isSaving} className={styles.primaryButton} onClick={() => saveBrief('Submitted')}>
+              {savingStatus === 'Submitted' ? 'Submitting brief...' : 'Submit brief'}
+            </button>
           </div>
           {message && (message.text.indexOf('saved as') === -1 && message.text.indexOf('SharePoint item ID') > -1 || message.text.indexOf('Product brief saved') > -1) && (
             <div className={`${styles.message} ${styles[message.type]}`} style={{ marginTop: '12px', width: '100%', textAlign: 'right' }}>
