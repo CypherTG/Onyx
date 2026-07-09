@@ -34,13 +34,13 @@
 /* ─── Root container: base styles (shared by start screen + open app) ─── */
 
 .onyx {
-  background: #fafafa;
+  background: transparent;
   box-sizing: border-box;
   color: #1a1a1a;
   font-family: "Outfit", "Inter", "Segoe UI", Arial, sans-serif;
   margin: 0;
   overflow-x: hidden;
-  padding: 32px clamp(20px, 3vw, 48px) clamp(20px, 3vw, 48px);
+  padding: 0;
   position: relative;
   width: 100%;
 
@@ -106,6 +106,8 @@
 /* ─── Full-screen overlay: applied only when app is opened ─── */
 
 .onyxOpen {
+  background: #fafafa;
+  padding: 32px clamp(20px, 3vw, 48px) clamp(20px, 3vw, 48px);
   height: 100vh;
   height: 100dvh;
   left: 0;
@@ -198,27 +200,39 @@
 /* ─── Start / Landing screen ─── */
 
 .startShell {
-  align-items: center;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 280px);
+  gap: 24px;
+  justify-content: start;
   min-height: auto;
-  padding: 48px 16px;
+  padding: 16px 0;
 }
 
 .startCard {
   background: #ffffff;
-  border-radius: 0;
+  border-radius: 4px;
   border: 1px solid #e5e5e5;
-  max-width: 500px;
-  padding: 40px;
+  padding: 32px 24px;
   text-align: center;
-  width: min(100%, 500px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
   position: relative;
   overflow: hidden;
+  min-height: 280px;
+  height: 100%;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
 
   h1 {
     color: #1a1a1a;
-    font-size: 28px;
+    font-size: 20px;
     font-weight: 500;
     line-height: 1.2;
     margin: 0 0 12px;
@@ -227,11 +241,11 @@
 
   p:not(.eyebrow) {
     color: #666666;
-    font-size: 15px;
-    line-height: 1.55;
-    margin: 0 auto 28px;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0 auto 24px;
     text-align: center;
-    max-width: 380px;
+    flex-grow: 1;
   }
 
   button {
@@ -239,19 +253,20 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 100%;
   }
 }
 
 .startLogo {
-  background: #ffffff;
-  border: 1px solid #f0f0f0;
+  background: transparent;
+  border: none;
   border-radius: 0;
-  height: 64px;
+  height: 48px;
   margin: 0 auto 16px;
   display: block;
   object-fit: contain;
-  padding: 6px;
-  width: 84px;
+  padding: 0;
+  width: 64px;
 }
 
 .eyebrow {
